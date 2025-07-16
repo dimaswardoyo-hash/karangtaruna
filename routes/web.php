@@ -86,7 +86,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/perlengkapan/{perlengkapan}', [PerlengkapanController::class, 'perlengkapanDestroy'])->name('perlengkapan.destroy');
     Route::get('/perlengkapan/peminjaman/tanggapan', [PerlengkapanController::class, 'daftarPengajuan'])->name('peminjaman.tanggapan');
     Route::get('/perlengkapan/{perlengkapan}/admin', [PerlengkapanController::class, 'perlengkapanShow'])->name('perlengkapan.admin.show');
-    Route::post('/perlengkapan/peminjaman/{peminjaman}/tanggapi', [PerlengkapanController::class, 'tanggapi'])->name('peminjaman.tanggapi');
+    Route::post('/perlengkapan/peminjaman/{user_id}/{perlengkapan_id}', [PerlengkapanController::class, 'tanggapi'])->name('peminjaman.tanggapi');
 
     /*
     |--------------------------------------------------------------------------

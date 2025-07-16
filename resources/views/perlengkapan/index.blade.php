@@ -58,18 +58,21 @@
                                             class="btn btn-sm btn-info">
                                             <i class="fas fa-info-circle"></i>
                                         </a>
-                                        <a href="{{ route('perlengkapan.edit', $perlengkapan->id) }}"
-                                            class="btn btn-sm btn-warning text-white">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ route('perlengkapan.destroy', $perlengkapan->id) }}" method="POST"
-                                            class="d-inline" onsubmit="return confirm('Yakin ingin menghapus barang ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
+                                        @if (Auth::user()->role === 'admin')
+                                            <a href="{{ route('perlengkapan.edit', $perlengkapan->id) }}"
+                                                class="btn btn-sm btn-warning text-white">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="{{ route('perlengkapan.destroy', $perlengkapan->id) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Yakin ingin menghapus barang ini?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty

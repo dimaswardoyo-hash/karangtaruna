@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Peminjaman;
 use App\Models\Perlengkapan;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class PerlengkapanController extends Controller
@@ -73,24 +74,26 @@ class PerlengkapanController extends Controller
     public function peminjamanIndex()
     {
         $perlengkapans = Perlengkapan::with([
-            'peminjamans' => function ($query) {
-                $query->where('status', 'berlangsung');
+            'users' => function ($q) {
+                $q->wherePivot('status', 'berlangsung');
             },
         ])->get();
 
         foreach ($perlengkapans as $item) {
-            $item->status = $item->peminjamans->count() > 0 ? 'Dipinjam' : 'Tersedia';
+            $item->status = $item->users->count() > 0 ? 'Dipinjam' : 'Tersedia';
         }
 
         return view('perlengkapan.pinjam.index', compact('perlengkapans'));
     }
 
+    // FORM CREATE
     public function peminjamanCreate($id)
     {
         $perlengkapan = Perlengkapan::findOrFail($id);
         return view('perlengkapan.pinjam.create', compact('perlengkapan'));
     }
 
+    // STORE
     public function peminjamanStore(Request $request)
     {
         $request->validate([
@@ -102,77 +105,87 @@ class PerlengkapanController extends Controller
 
         $perlengkapan = Perlengkapan::findOrFail($request->perlengkapan_id);
 
-        // Cek logika stok hanya sebagai validasi awal (stok tidak dikurangi dulu)
         if ($perlengkapan->stok < $request->jumlah) {
-            return redirect()
-                ->back()
-                ->withErrors(['jumlah' => 'Jumlah melebihi stok tersedia.']);
+            return back()->withErrors(['jumlah' => 'Jumlah melebihi stok tersedia.']);
         }
 
-        // Simpan pengajuan, status menunggu
-        Peminjaman::create([
-            'user_id' => auth()->id(),
-            'perlengkapan_id' => $request->perlengkapan_id,
-            'jumlah' => $request->jumlah,
-            'tanggal_pinjam' => $request->tanggal_pinjam,
-            'tanggal_kembali' => $request->tanggal_kembali,
-            'status' => 'menunggu',
-        ]);
+        auth()
+            ->user()
+            ->perlengkapans()
+            ->attach($request->perlengkapan_id, [
+                'jumlah' => $request->jumlah,
+                'tanggal_pinjam' => $request->tanggal_pinjam,
+                'tanggal_kembali' => $request->tanggal_kembali,
+                'status' => 'menunggu',
+                'tanggapan_admin' => null,
+            ]);
 
-        return redirect()->route('peminjaman.index')->with('success', 'Pengajuan berhasil dikirim, menunggu persetujuan.');
+        return redirect()->route('peminjaman.index')->with('success', 'Pengajuan berhasil dikirim.');
     }
 
+    // LIHAT SEMUA PENGAJUAN
     public function daftarPengajuan()
     {
-        $pengajuan = Peminjaman::with(['user', 'perlengkapan'])->get(); // ambil semua
-        return view('perlengkapan.pinjam.tanggapan', compact('pengajuan'));
+        $perlengkapans = Perlengkapan::with(['users'])->get();
+        return view('perlengkapan.pinjam.tanggapan', compact('perlengkapans'));
     }
-    public function tanggapi(Request $request, Peminjaman $peminjaman)
+
+    // TANGGAPI (ubah status)
+    public function tanggapi(Request $request, $user_id, $perlengkapan_id)
     {
         $request->validate([
             'status' => 'required|in:berlangsung,ditolak,selesai',
         ]);
 
-        if ($peminjaman->status !== 'menunggu' && $peminjaman->status !== 'berlangsung') {
+        $user = User::findOrFail($user_id);
+        $perlengkapan = Perlengkapan::findOrFail($perlengkapan_id);
+        $pivot = $user->perlengkapans()->where('perlengkapan_id', $perlengkapan_id)->first()->pivot;
+
+        if (!in_array($pivot->status, ['menunggu', 'berlangsung'])) {
             return back()->with('error', 'Peminjaman sudah ditanggapi.');
         }
 
-        $perlengkapan = $peminjaman->perlengkapan;
-
-        // Jika berlangsung → kurangi stok
-        if ($request->status === 'berlangsung') {
-            if ($perlengkapan->stok < $peminjaman->jumlah) {
+        // Kurangi atau kembalikan stok
+        if ($request->status == 'berlangsung') {
+            if ($perlengkapan->stok < $pivot->jumlah) {
                 return back()->with('error', 'Stok tidak mencukupi.');
             }
-            $perlengkapan->stok -= $peminjaman->jumlah;
-            $perlengkapan->save();
+            $perlengkapan->stok -= $pivot->jumlah;
         }
 
-        // Jika selesai (manual) → kembalikan stok (tapi hanya jika status sebelumnya "berlangsung")
-        if ($request->status === 'selesai' && $peminjaman->status === 'berlangsung') {
-            $perlengkapan->stok += $peminjaman->jumlah;
-            $perlengkapan->save();
+        if ($request->status == 'selesai' && $pivot->status == 'berlangsung') {
+            $perlengkapan->stok += $pivot->jumlah;
         }
 
-        $peminjaman->status = $request->status;
-        $peminjaman->save();
+        $perlengkapan->save();
+
+        $user->perlengkapans()->updateExistingPivot($perlengkapan_id, [
+            'status' => $request->status,
+            'tanggapan_admin' => $request->input('tanggapan_admin', null),
+        ]);
 
         return redirect()->route('peminjaman.tanggapan')->with('success', 'Tanggapan berhasil dikirim.');
     }
 
+    // AUTO CEK & KEMBALIKAN
     public function cekDanKembalikan()
     {
-        $peminjamanSelesai = Peminjaman::where('status', 'berlangsung')->whereDate('tanggal_kembali', '<', now())->get();
+        $perlengkapans = Perlengkapan::with(['users'])->get();
 
-        foreach ($peminjamanSelesai as $peminjaman) {
-            $perlengkapan = $peminjaman->perlengkapan;
-            $perlengkapan->stok += $peminjaman->jumlah;
-            $perlengkapan->save();
+        foreach ($perlengkapans as $barang) {
+            foreach ($barang->users as $user) {
+                $pivot = $user->pivot;
+                if ($pivot->status === 'berlangsung' && now()->gt($pivot->tanggal_kembali)) {
+                    $barang->stok += $pivot->jumlah;
+                    $barang->save();
 
-            $peminjaman->status = 'selesai';
-            $peminjaman->save();
+                    $user->perlengkapans()->updateExistingPivot($barang->id, [
+                        'status' => 'selesai',
+                    ]);
+                }
+            }
         }
 
-        return redirect()->back()->with('success', 'Stok barang dikembalikan untuk peminjaman yang selesai.');
+        return redirect()->back()->with('success', 'Peminjaman yang lewat waktu otomatis dikembalikan.');
     }
 }
