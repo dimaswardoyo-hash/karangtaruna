@@ -94,7 +94,8 @@ class ContentController extends Controller
     public function contentStore(Request $request)
     {
         $request->validate([
-            'kategori_id' => 'required|exists:kategoris,id',
+            'kategori_id' => 'required|array',
+            'kategori_id.*' => 'exists:kategoris,id',
             'nama_konten' => 'required|string|max:255',
             'tanggal_konten' => 'required|date',
             'deskripsi' => 'required|string',
@@ -103,21 +104,24 @@ class ContentController extends Controller
             'gambar3' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data = $request->only(['kategori_id', 'nama_konten', 'tanggal_konten', 'deskripsi']);
+        // Simpan konten
+        $data = $request->only(['nama_konten', 'tanggal_konten', 'deskripsi']);
 
         // Simpan masing-masing gambar ke storage
         foreach (['gambar1', 'gambar2', 'gambar3'] as $field) {
             $data[$field] = $request->file($field)->store('konten', 'public');
         }
 
-        Konten::create($data);
+        $konten = Konten::create($data);
 
+        // Simpan kategori ke pivot table
+        $konten->kategoris()->attach($request->kategori_id);
         return redirect()->route('content.index')->with('success', 'Konten berhasil ditambahkan.');
     }
 
     public function contentShow($id)
     {
-        $konten = Konten::with('kategori')->findOrFail($id);
+        $konten = Konten::with('kategoris')->findOrFail($id);
         return view('content.konten.show', compact('konten'));
     }
 

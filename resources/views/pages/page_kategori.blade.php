@@ -19,8 +19,7 @@
                             <a href="{{ route('kategori.show', $kategori->id) }}" class="component-categories d-block">
                                 <div class="categories-image">
                                     <img src="{{ asset('storage/' . $kategori->gambar_kategori) }}"
-                                        alt="{{ $kategori->nama_kategori }}" class="w-100"
-                                        style="object-fit: cover; height: 120px; border-radius: 8px;">
+                                        alt="{{ $kategori->nama_kategori }}" class="w-100">
                                 </div>
                                 <p class="categories-text">
                                     {{ $kategori->nama_kategori }}

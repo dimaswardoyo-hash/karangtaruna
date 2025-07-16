@@ -112,7 +112,15 @@
                     <div class="row">
                         <div class="col-lg-8 mt-4">
                             <h1>{{ $konten->nama_konten }}</h1>
-                            <div class="owner text-muted">Kategori: {{ $konten->kategori->nama_kategori }}</div>
+                            <div class="owner text-muted">
+                                Kategori:
+                                @forelse($konten->kategoris as $kategori)
+                                    <span class="badge bg-secondary">{{ $kategori->nama_kategori }}</span>
+                                @empty
+                                    <span class="text-danger">Belum ada kategori</span>
+                                @endforelse
+                            </div>
+
                             <div class="text-muted">Tanggal:
                                 {{ \Carbon\Carbon::parse($konten->tanggal_konten)->translatedFormat('d F Y') }}
                             </div>

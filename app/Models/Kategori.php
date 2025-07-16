@@ -12,6 +12,6 @@ class Kategori extends Model
 
     public function kontens()
     {
-        return $this->hasMany(Konten::class);
+        return $this->belongsToMany(Konten::class, 'kategori_konten');
     }
 }

@@ -18,13 +18,18 @@
 
                                     {{-- Pilih Kategori --}}
                                     <div class="mb-3">
-                                        <label>Kategori</label>
-                                        <select name="kategori_id" class="form-control" required>
-                                            <option value="">-- Pilih Kategori --</option>
+                                        <label class="form-label">Kategori</label>
+                                        <div class="d-flex flex-wrap gap-3 mt-2">
                                             @foreach ($kategoris as $kategori)
-                                                <option value="{{ $kategori->id }}">{{ $kategori->nama_kategori }}</option>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" name="kategori_id[]"
+                                                        id="kategori{{ $kategori->id }}" value="{{ $kategori->id }}">
+                                                    <label class="form-check-label" for="kategori{{ $kategori->id }}">
+                                                        {{ $kategori->nama_kategori }}
+                                                    </label>
+                                                </div>
                                             @endforeach
-                                        </select>
+                                        </div>
                                     </div>
 
                                     {{-- Nama Konten --}}

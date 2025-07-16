@@ -1,6 +1,5 @@
 @extends('layouts.dashboard')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
-
 @section('content')
     <style>
         /* Transition untuk animasi */
@@ -112,7 +111,11 @@
                     <div class="row">
                         <div class="col-lg-8 mt-4">
                             <h1>{{ $konten->nama_konten }}</h1>
-                            <div class="owner text-muted">Kategori: {{ $konten->kategori->nama_kategori }}</div>
+                            <div class="owner text-muted">Kategori:
+                                @foreach ($konten->kategoris as $kategori)
+                                    <span class="badge">{{ $kategori->nama_kategori }}</span>
+                                @endforeach
+                            </div>
                             <div class="text-muted">Tanggal:
                                 {{ \Carbon\Carbon::parse($konten->tanggal_konten)->translatedFormat('d F Y') }}</div>
                         </div>

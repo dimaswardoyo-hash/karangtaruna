@@ -8,18 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Konten extends Model
 {
     use HasFactory;
-    protected $fillable = [
-        'kategori_id',
-        'nama_konten',
-        'tanggal_konten',
-        'deskripsi',
-        'gambar1',
-        'gambar2',
-        'gambar3'
-    ];
+    protected $fillable = ['nama_konten', 'tanggal_konten', 'deskripsi', 'gambar1', 'gambar2', 'gambar3'];
 
-    public function kategori()
+    public function kategoris()
     {
-        return $this->belongsTo(Kategori::class);
+        return $this->belongsToMany(Kategori::class, 'kategori_konten');
     }
 }

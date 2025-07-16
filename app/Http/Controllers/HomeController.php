@@ -38,7 +38,7 @@ class HomeController extends Controller
     public function kategori($id)
     {
         $kategori = Kategori::findOrFail($id);
-        $kontens = Konten::where('kategori_id', $id)->latest()->get();
+        $kontens = $kategori->kontens()->latest()->get();
         $categories = Kategori::all();
 
         return view('pages.kategori', compact('kategori', 'kontens', 'categories'));
@@ -46,7 +46,7 @@ class HomeController extends Controller
 
     public function show($id)
     {
-        $konten = Konten::with('kategori')->findOrFail($id);
+        $konten = Konten::with('kategoris')->findOrFail($id);
         return view('pages.detail', compact('konten'));
     }
 
