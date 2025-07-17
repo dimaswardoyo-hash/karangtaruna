@@ -137,7 +137,8 @@ class ContentController extends Controller
         $konten = Konten::findOrFail($id);
 
         $request->validate([
-            'kategori_id' => 'required|exists:kategoris,id',
+            'kategori_id' => 'required|array',
+            'kategori_id.*' => 'exists:kategoris,id',
             'nama_konten' => 'required|string|max:255',
             'tanggal_konten' => 'required|date',
             'deskripsi' => 'required|string',
@@ -146,7 +147,9 @@ class ContentController extends Controller
             'gambar3' => 'nullable|image|mimes:jpg,jpeg,png|max:5048',
         ]);
 
-        $konten->fill($request->only(['kategori_id', 'nama_konten', 'tanggal_konten', 'deskripsi']));
+        $konten->nama_konten = $request->nama_konten;
+        $konten->tanggal_konten = $request->tanggal_konten;
+        $konten->deskripsi = $request->deskripsi;
 
         foreach (['gambar1', 'gambar2', 'gambar3'] as $gambarField) {
             if ($request->hasFile($gambarField)) {
@@ -156,6 +159,9 @@ class ContentController extends Controller
         }
 
         $konten->save();
+
+        // Sync kategori pivot table
+        $konten->kategoris()->sync($request->kategori_id);
 
         return redirect()->route('content.index')->with('success', 'Konten berhasil diperbarui.');
     }

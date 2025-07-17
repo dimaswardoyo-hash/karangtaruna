@@ -34,16 +34,19 @@
 
                                     {{-- Pilih Kategori --}}
                                     <div class="mb-3">
-                                        <label>Kategori</label>
-                                        <select name="kategori_id" class="form-control" required>
-                                            <option value="">-- Pilih Kategori --</option>
+                                        <label class="form-label">Kategori</label><br>
+                                        <div class="d-flex flex-wrap gap-3">
                                             @foreach ($kategoris as $kategori)
-                                                <option value="{{ $kategori->id }}"
-                                                    {{ $kategori->id == old('kategori_id', $konten->kategori_id) ? 'selected' : '' }}>
-                                                    {{ $kategori->nama_kategori }}
-                                                </option>
+                                                <div class="form-check me-3">
+                                                    <input type="checkbox" class="form-check-input" name="kategori_id[]"
+                                                        value="{{ $kategori->id }}" id="kategori_{{ $kategori->id }}"
+                                                        {{ $konten->kategoris->contains($kategori->id) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="kategori_{{ $kategori->id }}">
+                                                        {{ $kategori->nama_kategori }}
+                                                    </label>
+                                                </div>
                                             @endforeach
-                                        </select>
+                                        </div>
                                     </div>
 
                                     {{-- Nama Konten --}}

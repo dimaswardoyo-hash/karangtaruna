@@ -39,7 +39,7 @@
                             <tr>
                                 <td><strong>Foto</strong></td>
                                 <td>
-                                    @if ($agenda->foto && file_exists(public_path('storage/' . $agenda->foto)))
+                                    @if ($agenda->foto)
                                         <img src="{{ asset('storage/' . $agenda->foto) }}" alt="Foto Agenda"
                                             style="max-width: 300px;" class="img-fluid mt-2">
                                     @else
@@ -186,7 +186,8 @@
 
                         @endif
 
-                        <a href="{{ auth()->user()->role === 'admin' ? route('agenda.admin.index') : route('agenda.anggota.index') }}" class="btn btn-danger mt-4">Kembali</a>
+                        <a href="{{ auth()->user()->role === 'admin' ? route('agenda.admin.index') : route('agenda.anggota.index') }}"
+                            class="btn btn-danger mt-4">Kembali</a>
                     </div>
                 </div>
             </div>

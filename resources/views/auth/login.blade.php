@@ -7,7 +7,7 @@
             <div class="container">
                 <div class="row align-items-center row-login">
                     <div class="col-lg-6 text-center">
-                        <img src="/admin/img/logo.png" class="w-50 mb-4 mb-lg-none" alt="" />
+                        <img src="/assets/images/Budaya.svg" class="w-50 mb-4 mb-lg-none" alt="" />
                     </div>
                     <div class="col-lg-5">
                         <h2>

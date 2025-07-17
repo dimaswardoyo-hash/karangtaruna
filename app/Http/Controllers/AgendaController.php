@@ -41,11 +41,11 @@ class AgendaController extends Controller
 
         if ($request->kategori === 'kegiatan') {
             $request->validate([
-                'foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:5000',
             ]);
         } else {
             $request->validate([
-                'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5000',
             ]);
         }
 
