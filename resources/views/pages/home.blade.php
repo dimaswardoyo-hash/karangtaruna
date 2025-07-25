@@ -7,33 +7,21 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12" data-aos="zoom-in">
-                        <div id="storeCarousel" class="carousel slide" data-ride="carousel">
-                            {{-- Indicators --}}
-                            @if ($banners->count() > 0)
-                                <ol class="carousel-indicators">
-                                    @foreach ($banners as $key => $banner)
-                                        <li data-target="#storeCarousel" data-slide-to="{{ $key }}"
-                                            class="{{ $key == 0 ? 'active' : '' }}"></li>
-                                    @endforeach
-                                </ol>
-                            @endif
-
-                            {{-- Carousel Content --}}
+                        <div id="storeCarousel" class="carousel slide" data-ride="carousel" data-interval="5000">
+                            <ol class="carousel-indicators">
+                                @foreach ($banners as $key => $banner)
+                                    <li data-target="#storeCarousel" data-slide-to="{{ $key }}"
+                                        class="{{ $key == 0 ? 'active' : '' }}"></li>
+                                @endforeach
+                            </ol>
                             <div style="max-height: 400px; border-radius: 15px;" class="carousel-inner">
-                                @if ($banners->count() > 0)
-                                    @foreach ($banners as $key => $banner)
-                                        <div class="carousel-item {{ $key == 0 ? 'active' : '' }}">
-                                            <img src="{{ asset('storage/' . $banner->gambar) }}" alt="Banner Image"
-                                                class="d-block w-100">
-                                        </div>
-                                    @endforeach
-                                @else
-                                    {{-- Default fallback image --}}
-                                    <div class="carousel-item active">
-                                        <img src="{{ asset('/assets/images/banner/banner2.jpg') }}" alt="Carousel Image"
-                                            class="d-block w-100">
+                                @foreach ($banners as $key => $banner)
+                                    <div class="carousel-item {{ $key == 0 ? 'active' : '' }}">
+                                        <img src="{{ asset('storage/' . $banner->gambar) }}" alt="Carousel Image"
+                                            class="d-block w-100"
+                                            style="object-fit: cover; height: 400px; border-radius: 15px;">
                                     </div>
-                                @endif
+                                @endforeach
                             </div>
                         </div>
                     </div>
