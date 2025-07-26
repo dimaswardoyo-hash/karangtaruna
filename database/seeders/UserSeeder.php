@@ -15,21 +15,21 @@ class UserSeeder extends Seeder
         // Admin
         User::create([
             'name' => 'Dimas Tampan',
-            'email' => 'dimas@gmail.com',
-            'password' => Hash::make('uluketel'), 
+            'email' => 'dimaswardoyo10@gmail.com',
+            'password' => Hash::make('uluketel'),
             'role' => 'admin',
         ]);
-        User::create([
-            'name' => 'Anggota 1',
-            'email' => 'anggota1@gmail.com',
-            'password' => Hash::make('uluketel'),
-            'role' => 'anggota',
-        ]);
-        User::create([
-            'name' => 'Anggota 2',
-            'email' => 'anggota2@gmail.com',
-            'password' => Hash::make('uluketel'),
-            'role' => 'anggota',
-        ]);
+
+        $faker = Faker::create();
+
+        // 999 Anggota
+        for ($i = 1; $i <= 999; $i++) {
+            User::create([
+                'name' => 'Anggota ' . $i,
+                'email' => 'anggota' . $i . '@gmail.com',
+                'password' => Hash::make('uluketel'),
+                'role' => 'anggota',
+            ]);
+        }
     }
 }
