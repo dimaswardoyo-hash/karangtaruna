@@ -19,18 +19,14 @@ class UserSeeder extends Seeder
             'password' => Hash::make('uluketel'), 
             'role' => 'admin',
         ]);
-
-        // Anggota 1
         User::create([
-            'name' => 'Anggota Satu',
+            'name' => 'Anggota 1',
             'email' => 'anggota1@gmail.com',
             'password' => Hash::make('uluketel'),
             'role' => 'anggota',
         ]);
-
-        // Anggota 2
         User::create([
-            'name' => 'Anggota Dua',
+            'name' => 'Anggota 2',
             'email' => 'anggota2@gmail.com',
             'password' => Hash::make('uluketel'),
             'role' => 'anggota',
