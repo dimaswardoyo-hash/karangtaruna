@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 17, 2025 at 06:20 AM
+-- Generation Time: Jul 27, 2025 at 03:51 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.1.10
 
@@ -20,6 +20,74 @@ SET time_zone = "+00:00";
 --
 -- Database: `karangtaruna`
 --
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CountCompletedKegiatan` (IN `tanggal_cutoff` DATE, OUT `hasilPesan` VARCHAR(255))   BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE agd_id BIGINT;
+    DECLARE agd_nama VARCHAR(255);
+    DECLARE jumlah INT DEFAULT 0;
+
+    DECLARE cur CURSOR FOR
+        SELECT id, nama_agenda FROM karangtaruna.agendas
+        WHERE kategori = 'kegiatan' AND waktu_selesai < tanggal_cutoff;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+    read_loop: LOOP
+        FETCH cur INTO agd_id, agd_nama;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+        SET jumlah = jumlah + 1;
+    END LOOP;
+    CLOSE cur;
+
+    IF jumlah = 0 THEN
+        SET hasilPesan = 'Tidak ada kegiatan yang selesai sebelum tanggal tersebut.';
+    ELSE
+        SET hasilPesan = CONCAT('Terdapat ', jumlah, ' kegiatan yang telah selesai.');
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ShowActiveAgenda` ()   BEGIN
+    SELECT id, nama_agenda, kategori, waktu_mulai, waktu_selesai, lokasi
+    FROM karangtaruna.agendas
+    WHERE presensi_open = 1;
+END$$
+
+--
+-- Functions
+--
+CREATE DEFINER=`root`@`localhost` FUNCTION `TotalAnggota` () RETURNS INT DETERMINISTIC BEGIN
+    DECLARE total INT;
+    SELECT COUNT(*) INTO total FROM karangtaruna.users WHERE role = 'anggota';
+    RETURN total;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `TotalKasByJumlahAnggota` (`min_anggota` INT, `deskripsi_param` TEXT) RETURNS INT DETERMINISTIC BEGIN
+    DECLARE total INT DEFAULT 0;
+    DECLARE jumlah_anggota INT;
+    DECLARE deskripsi_fixed TEXT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+    SET deskripsi_fixed = deskripsi_param;
+
+    SELECT COUNT(*) INTO jumlah_anggota FROM karangtaruna.users WHERE role = 'anggota';
+
+    IF jumlah_anggota >= min_anggota THEN
+        SELECT SUM(jumlah) INTO total 
+        FROM karangtaruna.kas 
+        WHERE deskripsi LIKE CONCAT('%', deskripsi_fixed, '%');
+    END IF;
+
+    RETURN IFNULL(total, 0);
+END$$
+
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -46,8 +114,59 @@ CREATE TABLE `agendas` (
 --
 
 INSERT INTO `agendas` (`id`, `nama_agenda`, `kategori`, `foto`, `deskripsi`, `waktu_mulai`, `waktu_selesai`, `lokasi`, `presensi_open`, `created_at`, `updated_at`) VALUES
-(1, 'Rapat Anggota Tahunan', 'rapat', NULL, 'Rapat Anggota Tahunan (RAT) adalah pertemuan tahunan yang wajib diselenggarakan oleh setiap koperasi untuk membahas laporan pertanggungjawaban pengurus, rencana kerja, dan rencana anggaran tahun berikutnya. RAT merupakan wujud transparansi dan akuntabilitas pengurus kepada anggota.', '2025-07-17 12:55:00', '2025-07-17 14:58:00', 'Rumah Pak Camat', 1, '2025-07-17 05:58:43', '2025-07-17 05:58:52'),
-(2, 'Budaya Ponorogo kaya akan berbagai kesenian dan tradisi.', 'kegiatan', 'foto_agenda/YbPqgWcBeh562W32ZwdnpY67dhPbwzlIrAqnjHQm.jpg', 'Budaya Ponorogo kaya akan berbagai kesenian dan tradisi. Yang paling terkenal adalah Reog Ponorogo, sebuah seni pertunjukan yang menampilkan topeng singa berhias merak dan menjadi ikon kota ini. Selain Reog, Ponorogo juga memiliki kesenian lain seperti Gajah-gajahan, Wayang Kulit, dan berbagai tradisi seperti Grebeg Suro, Nyadran, dan Sedekah Bumi.', '2025-07-17 13:00:00', '2025-07-18 13:01:00', 'Daerah Jawa', 0, '2025-07-17 06:01:28', '2025-07-17 06:01:28');
+(3, 'Konser Dangdut', 'kegiatan', 'foto_agenda/rRg9OXZp3JNOOraxBz3GleDiOTCJQ8tSfz520s9Y.jpg', 'Konser dangdut bersama para gus', '2025-07-27 17:35:00', '2025-07-27 22:35:00', 'Daerah Jawa', 0, '2025-07-25 16:36:55', '2025-07-25 16:36:55'),
+(4, 'Ngaji Bareng', 'kegiatan', 'foto_agenda/o1sxqFDaUhvtlTHzW7KFkzD6FbJ3Y9SOCf0eNT78.jpg', 'Ngaji bareng mendengarkan ustad felix', '2025-07-26 22:56:00', '2025-07-26 23:56:00', 'Masjidil haram', 0, '2025-07-26 15:57:53', '2025-07-26 15:57:53'),
+(5, 'Kegiatan Sosialisasi', 'kegiatan', NULL, 'Workshop untuk UMKM', '2025-07-26 23:00:39', '2025-07-27 01:00:39', 'Balai Desa', 1, NULL, NULL),
+(6, 'Bersih desa', 'kegiatan', 'foto_agenda/8fujqijW6goC3smesxaHpEvhGGUbKSwruBGqbGJA.png', 'Kegiatan bersih desa, untuk menyambut HUT RI ke 80', '2025-07-30 09:00:00', '2025-07-30 13:00:00', 'Daerah Jawa', 0, '2025-07-27 06:07:08', '2025-07-27 06:07:08'),
+(7, 'Rapat Kabeint', 'rapat', NULL, 'Rapat kabinet membahas tentang indonesia merdeka', '2025-07-27 21:59:00', '2025-07-27 23:59:00', 'Amikom', 1, '2025-07-27 15:13:17', '2025-07-27 15:16:51');
+
+--
+-- Triggers `agendas`
+--
+DELIMITER $$
+CREATE TRIGGER `after_update_agenda` AFTER UPDATE ON `agendas` FOR EACH ROW BEGIN
+    IF OLD.nama_agenda <> NEW.nama_agenda THEN
+        INSERT INTO karangtaruna.agenda_logs (agenda_id, perubahan)
+        VALUES (NEW.id, CONCAT('Nama agenda diubah dari "', OLD.nama_agenda, '" menjadi "', NEW.nama_agenda, '"'));
+    END IF;
+
+    IF OLD.deskripsi <> NEW.deskripsi THEN
+        INSERT INTO karangtaruna.agenda_logs (agenda_id, perubahan)
+        VALUES (NEW.id, CONCAT('Deskripsi agenda diubah.'));
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `before_delete_agenda` BEFORE DELETE ON `agendas` FOR EACH ROW BEGIN
+    IF OLD.presensi_open = 1 THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Agenda dengan presensi terbuka tidak dapat dihapus.';
+    END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `agenda_logs`
+--
+
+CREATE TABLE `agenda_logs` (
+  `id` bigint NOT NULL,
+  `agenda_id` bigint DEFAULT NULL,
+  `perubahan` text,
+  `tanggal` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `agenda_logs`
+--
+
+INSERT INTO `agenda_logs` (`id`, `agenda_id`, `perubahan`, `tanggal`) VALUES
+(1, 2, 'Nama agenda diubah dari \"Budaya Ponorogo kaya akan berbagai kesenian dan tradisi.\" menjadi \"Rapat Koordinasi Final\"', '2025-07-26 16:44:58'),
+(2, 5, 'Nama agenda diubah dari \"Pelatihan UMKM\" menjadi \"Kegiatan Sosialisasi\"', '2025-07-26 23:02:22');
 
 -- --------------------------------------------------------
 
@@ -67,7 +186,9 @@ CREATE TABLE `banners` (
 --
 
 INSERT INTO `banners` (`id`, `gambar`, `created_at`, `updated_at`) VALUES
-(1, 'banner/xNpydCJHsPN3OIqr7DqrNQqQa7I4i1fgqLbeOXzL.jpg', '2025-07-17 06:10:38', '2025-07-17 06:10:38');
+(1, 'banner/GwFIQQ9gmbU2ZocQvrjvcqEcIazFsx9McVSQP2rF.jpg', '2025-07-17 06:10:38', '2025-07-25 16:05:09'),
+(2, 'banner/LIB0tEA5XkCWYy7w0vXla47R8gCeg61nSZXMg5B3.jpg', '2025-07-25 16:05:25', '2025-07-25 16:37:29'),
+(3, 'banner/76HukZaeu6iSDjWdL8mpnTb72mPto5LUCh5UDx0G.jpg', '2025-07-25 16:05:35', '2025-07-25 16:05:35');
 
 -- --------------------------------------------------------
 
@@ -118,7 +239,7 @@ CREATE TABLE `hutangs` (
   `user_id` bigint UNSIGNED NOT NULL,
   `tanggal` date NOT NULL,
   `jumlah` int NOT NULL,
-  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `keterangan` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1175,7 +1296,21 @@ INSERT INTO `kas` (`id`, `user_id`, `tanggal`, `jumlah`, `deskripsi`, `created_a
 (34, 33, '2025-07-17', 5000, 'Pembayaran hutang: Belum membayar kas tanggal 2025-07-17', '2025-07-17 05:52:54', '2025-07-17 05:52:54'),
 (35, 34, '2025-07-17', 5000, 'Pembayaran hutang: Belum membayar kas tanggal 2025-07-17', '2025-07-17 05:52:57', '2025-07-17 05:52:57'),
 (36, 35, '2025-07-17', 5000, 'Pembayaran hutang: Belum membayar kas tanggal 2025-07-17', '2025-07-17 05:52:59', '2025-07-17 05:52:59'),
-(37, 36, '2025-07-17', 5000, 'Pembayaran hutang: Belum membayar kas tanggal 2025-07-17', '2025-07-17 05:53:02', '2025-07-17 05:53:02');
+(37, 36, '2025-07-17', 5000, 'Pembayaran hutang: Belum membayar kas tanggal 2025-07-17', '2025-07-17 05:53:02', '2025-07-17 05:53:02'),
+(38, 1, '2025-07-26', 1000, 'Test Trigger Kas', NULL, NULL),
+(39, 1, '2025-07-26', 500, 'Test Trigger Kas', NULL, NULL);
+
+--
+-- Triggers `kas`
+--
+DELIMITER $$
+CREATE TRIGGER `before_insert_kas` BEFORE INSERT ON `kas` FOR EACH ROW BEGIN
+    IF NEW.jumlah < 1000 THEN
+        SET NEW.jumlah = 1000;
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -1272,6 +1407,19 @@ INSERT INTO `kontens` (`id`, `nama_konten`, `tanggal_konten`, `deskripsi`, `gamb
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `logs_kas`
+--
+
+CREATE TABLE `logs_kas` (
+  `id` bigint NOT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `perubahan` text,
+  `tanggal` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `migrations`
 --
 
@@ -1337,7 +1485,7 @@ CREATE TABLE `notulens` (
 --
 
 INSERT INTO `notulens` (`id`, `agenda_id`, `notulen`, `pembicara`, `poin_pembahasan`, `kesimpulan`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Dengan melaksanakan RAT secara tertib dan partisipatif, koperasi dapat memastikan tata kelola yang baik, transparansi, dan akuntabilitas, serta melibatkan anggota dalam pengambilan keputusan yang akan berdampak pada kemajuan koperasi.', 'Dimas Aryo Wardoyo', 'Laporan pertanggungjawaban pengurus dan pengawas.\r\nRencana kerja dan anggaran koperasi untuk tahun berikutnya.\r\nEvaluasi kinerja koperasi dan program kerja sebelumnya.\r\nPerubahan anggaran dasar (jika ada).\r\nPemilihan pengurus dan pengawas baru (jika ada).\r\nPenetapan kebijakan umum koperasi.', NULL, '2025-07-17 05:59:53', '2025-07-17 05:59:53');
+(2, 7, 'edit', 'Dimas Aryo Wardoyo', 'Test Notulen rapat', NULL, '2025-07-27 15:28:29', '2025-07-27 15:30:35');
 
 -- --------------------------------------------------------
 
@@ -1458,10 +1606,8 @@ CREATE TABLE `presensis` (
 --
 
 INSERT INTO `presensis` (`id`, `agenda_id`, `user_id`, `waktu_presensi`, `token_yang_dipakai`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, '2025-07-17 12:58:52', 'cRKmuI', '2025-07-17 05:58:52', '2025-07-17 05:58:52'),
-(2, 1, 2, '2025-07-17 13:13:54', '0a8612', '2025-07-17 06:13:54', '2025-07-17 06:13:54'),
-(3, 1, 3, '2025-07-17 13:15:20', 'ec9afd', '2025-07-17 06:15:20', '2025-07-17 06:15:20'),
-(4, 1, 4, '2025-07-17 13:16:22', 'b3cb9a', '2025-07-17 06:16:22', '2025-07-17 06:16:22');
+(5, 7, 1, '2025-07-27 22:16:51', '7jZ51x', '2025-07-27 15:16:51', '2025-07-27 15:16:51'),
+(6, 7, 2, '2025-07-27 22:19:53', 'eb25da', '2025-07-27 15:19:53', '2025-07-27 15:19:53');
 
 -- --------------------------------------------------------
 
@@ -2547,6 +2693,88 @@ INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `re
 (999, 'Anggota 998', 'anggota998@gmail.com', NULL, '$2y$12$nQuXgzMBr46LueyhiLmYgOt95X8rARgKlV55J9vF6mvn6IF3PLn0i', NULL, '2025-07-17 04:25:18', '2025-07-17 04:25:18', 'anggota'),
 (1000, 'Anggota 999', 'anggota999@gmail.com', NULL, '$2y$12$qJY.mRucrUkNaRbIIXGgxevFmSU8FRDw1iWKNqbM9N6NoXvbYQh5O', NULL, '2025-07-17 04:25:18', '2025-07-17 04:25:18', 'anggota');
 
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `v_horizontal_agenda`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_horizontal_agenda` (
+`id` bigint unsigned
+,`nama_agenda` varchar(255)
+,`kategori` enum('kegiatan','rapat')
+,`waktu_mulai` datetime
+,`waktu_selesai` datetime
+,`presensi_open` tinyint(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `v_insideview_kegiatan`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_insideview_kegiatan` (
+`id` bigint unsigned
+,`nama_agenda` varchar(255)
+,`kategori` enum('kegiatan','rapat')
+,`foto` varchar(255)
+,`deskripsi` text
+,`waktu_mulai` datetime
+,`waktu_selesai` datetime
+,`lokasi` varchar(255)
+,`presensi_open` tinyint(1)
+,`created_at` timestamp
+,`updated_at` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `v_vertical_kegiatan`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_vertical_kegiatan` (
+`id` bigint unsigned
+,`nama_agenda` varchar(255)
+,`kategori` enum('kegiatan','rapat')
+,`foto` varchar(255)
+,`deskripsi` text
+,`waktu_mulai` datetime
+,`waktu_selesai` datetime
+,`lokasi` varchar(255)
+,`presensi_open` tinyint(1)
+,`created_at` timestamp
+,`updated_at` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_horizontal_agenda`
+--
+DROP TABLE IF EXISTS `v_horizontal_agenda`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_horizontal_agenda`  AS SELECT `agendas`.`id` AS `id`, `agendas`.`nama_agenda` AS `nama_agenda`, `agendas`.`kategori` AS `kategori`, `agendas`.`waktu_mulai` AS `waktu_mulai`, `agendas`.`waktu_selesai` AS `waktu_selesai`, `agendas`.`presensi_open` AS `presensi_open` FROM `agendas` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_insideview_kegiatan`
+--
+DROP TABLE IF EXISTS `v_insideview_kegiatan`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_insideview_kegiatan`  AS SELECT `v_vertical_kegiatan`.`id` AS `id`, `v_vertical_kegiatan`.`nama_agenda` AS `nama_agenda`, `v_vertical_kegiatan`.`kategori` AS `kategori`, `v_vertical_kegiatan`.`foto` AS `foto`, `v_vertical_kegiatan`.`deskripsi` AS `deskripsi`, `v_vertical_kegiatan`.`waktu_mulai` AS `waktu_mulai`, `v_vertical_kegiatan`.`waktu_selesai` AS `waktu_selesai`, `v_vertical_kegiatan`.`lokasi` AS `lokasi`, `v_vertical_kegiatan`.`presensi_open` AS `presensi_open`, `v_vertical_kegiatan`.`created_at` AS `created_at`, `v_vertical_kegiatan`.`updated_at` AS `updated_at` FROM `v_vertical_kegiatan` WHERE (`v_vertical_kegiatan`.`presensi_open` = 1)WITH LOCAL CHECK OPTION  ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_vertical_kegiatan`
+--
+DROP TABLE IF EXISTS `v_vertical_kegiatan`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_vertical_kegiatan`  AS SELECT `agendas`.`id` AS `id`, `agendas`.`nama_agenda` AS `nama_agenda`, `agendas`.`kategori` AS `kategori`, `agendas`.`foto` AS `foto`, `agendas`.`deskripsi` AS `deskripsi`, `agendas`.`waktu_mulai` AS `waktu_mulai`, `agendas`.`waktu_selesai` AS `waktu_selesai`, `agendas`.`lokasi` AS `lokasi`, `agendas`.`presensi_open` AS `presensi_open`, `agendas`.`created_at` AS `created_at`, `agendas`.`updated_at` AS `updated_at` FROM `agendas` WHERE (`agendas`.`kategori` = 'kegiatan') ;
+
 --
 -- Indexes for dumped tables
 --
@@ -2555,6 +2783,13 @@ INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `re
 -- Indexes for table `agendas`
 --
 ALTER TABLE `agendas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_kategori_presensi` (`kategori`,`presensi_open`);
+
+--
+-- Indexes for table `agenda_logs`
+--
+ALTER TABLE `agenda_logs`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -2595,7 +2830,8 @@ ALTER TABLE `identitas`
 --
 ALTER TABLE `kas`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `kas_user_id_foreign` (`user_id`);
+  ADD KEY `kas_user_id_foreign` (`user_id`),
+  ADD KEY `idx_deskripsi_tanggal` (`deskripsi`(100),`tanggal`);
 
 --
 -- Indexes for table `kategoris`
@@ -2622,6 +2858,13 @@ ALTER TABLE `keluargas`
 --
 ALTER TABLE `kontens`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `logs_kas`
+--
+ALTER TABLE `logs_kas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_tanggal` (`user_id`,`tanggal`);
 
 --
 -- Indexes for table `migrations`
@@ -2706,13 +2949,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `agendas`
 --
 ALTER TABLE `agendas`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `agenda_logs`
+--
+ALTER TABLE `agenda_logs`
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `banners`
 --
 ALTER TABLE `banners`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `dana_lains`
@@ -2742,7 +2991,7 @@ ALTER TABLE `identitas`
 -- AUTO_INCREMENT for table `kas`
 --
 ALTER TABLE `kas`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `kategoris`
@@ -2763,6 +3012,12 @@ ALTER TABLE `kontens`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `logs_kas`
+--
+ALTER TABLE `logs_kas`
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
@@ -2772,7 +3027,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `notulens`
 --
 ALTER TABLE `notulens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `peminjamans`
@@ -2802,7 +3057,7 @@ ALTER TABLE `personal_access_tokens`
 -- AUTO_INCREMENT for table `presensis`
 --
 ALTER TABLE `presensis`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `strukturs`
