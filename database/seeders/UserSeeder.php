@@ -20,10 +20,8 @@ class UserSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        $faker = Faker::create();
-
-        // 999 Anggota
-        for ($i = 1; $i <= 999; $i++) {
+        // 3 Anggota
+        for ($i = 1; $i <= 3; $i++) {
             User::create([
                 'name' => 'Anggota ' . $i,
                 'email' => 'anggota' . $i . '@gmail.com',
