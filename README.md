@@ -1,6 +1,6 @@
 # 🌐 Karang Taruna Klaten - Sistem Informasi Pemuda dan Organisasi
 
-Selamat datang di repositori website [**Karang Taruna Kabupaten Klaten**](https://klatenasyik.biz.id)!
+Selamat datang di repositori website [**Karang Taruna Kabupaten Klaten**]!
 
 Website ini dirancang sebagai **pusat informasi, manajemen kegiatan, dan pemberdayaan pemuda** dalam satu sistem digital terpadu.  
 💡 Dibangun dengan semangat _"Berkarya, Bersatu, dan Berdaya!"_
