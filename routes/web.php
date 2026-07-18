@@ -37,6 +37,9 @@ Route::controller(AuthController::class)->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/struktur', [StrukturController::class, 'index'])->name('struktur.index');
+
+    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
+    Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
 });
 
 /*
@@ -172,6 +175,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('undangan', UndanganController::class);
     Route::get('/undangan/{id}/pdf', [UndanganController::class, 'exportPdf'])->name('undangan.pdf');
     Route::get('/undangan/{id}/word', [UndanganController::class, 'exportWord'])->name('undangan.word');
+
+    Route::get('/ai-assistant/insight', [AiAssistantController::class, 'insight'])->name('ai.insight');
 });
 
 /*
@@ -215,24 +220,6 @@ Route::middleware(['auth', 'role:anggota'])->group(function () {
     Route::get('/peminjaman', [PerlengkapanController::class, 'peminjamanIndex'])->name('peminjaman.index');
     Route::get('/perlengkapan/peminjaman/create/{id}', [PerlengkapanController::class, 'peminjamanCreate'])->name('peminjaman.create');
     Route::post('/perlengkapan/peminjaman', [PerlengkapanController::class, 'peminjamanStore'])->name('peminjaman.store');
-
-    /*
-    |--------------------------------------------------------------------------
-    | KEUANGAN
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
-        Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
-
-        // route lain yang sudah ada (dashboard, struktur, dst) tetap di sini...
-    });
-
-    Route::middleware(['auth', 'role:admin'])->group(function () {
-        Route::get('/ai-assistant/insight', [AiAssistantController::class, 'insight'])->name('ai.insight');
-
-        // route admin lain yang sudah ada tetap di sini...
-    });
 
     /*
     |--------------------------------------------------------------------------
