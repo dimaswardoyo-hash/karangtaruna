@@ -40,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
     Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
+    Route::delete('/ai-assistant/history/{aiQuery}', [AiAssistantController::class, 'destroyHistory'])->name('ai.history.destroy');
+    Route::delete('/ai-assistant/history', [AiAssistantController::class, 'clearHistory'])->name('ai.history.clear');
 });
 
 /*

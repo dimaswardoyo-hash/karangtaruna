@@ -121,6 +121,7 @@ class AiAssistantController extends Controller
         }
 
         return response()->json([
+            'id' => $aiQuery->id,
             'question' => $aiQuery->question,
             'answer' => $aiQuery->answer,
             'agent_used' => $aiQuery->agent_used,
@@ -128,6 +129,31 @@ class AiAssistantController extends Controller
             'sources' => $aiQuery->sources,
             'evaluation' => $data['evaluation'] ?? null,
         ]);
+    }
+
+    /**
+     * Hapus satu item riwayat pertanyaan milik user yang login.
+     * Evaluasi terkait ikut terhapus otomatis (cascadeOnDelete di DB).
+     */
+    public function destroyHistory(AiQuery $aiQuery)
+    {
+        if ($aiQuery->user_id !== auth()->id()) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $aiQuery->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * Hapus semua riwayat pertanyaan milik user yang login.
+     */
+    public function clearHistory()
+    {
+        AiQuery::where('user_id', auth()->id())->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     /**
