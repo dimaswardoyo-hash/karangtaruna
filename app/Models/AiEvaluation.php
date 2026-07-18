@@ -11,7 +11,7 @@ class AiEvaluation extends Model
 
     protected $fillable = ['ai_query_id', 'accuracy_score', 'effectiveness_score', 'efficiency_score', 'explainability_score', 'hallucination_score', 'notes'];
 
-    public function query()
+    public function aiQuery()
     {
         return $this->belongsTo(AiQuery::class, 'ai_query_id');
     }
