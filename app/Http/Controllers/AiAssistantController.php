@@ -52,35 +52,71 @@ class AiAssistantController extends Controller
         $latencyMs = (int) ((microtime(true) - $start) * 1000);
 
         if (!$response->successful()) {
+            \Illuminate\Support\Facades\Log::warning('AI service merespons gagal', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             return response()->json(
                 [
-                    'error' => 'AI service tidak dapat dihubungi. Pastikan ai-service sedang berjalan.',
+                    'error' => 'AI service merespons dengan status ' . $response->status() . '. Cek log ai-service untuk detailnya.',
                 ],
                 502,
             );
         }
 
         $data = $response->json();
+
+        if (!is_array($data) || !isset($data['answer'])) {
+            \Illuminate\Support\Facades\Log::warning('AI service mengembalikan format respons tidak sesuai', [
+                'body' => $response->body(),
+            ]);
+
+            return response()->json(
+                [
+                    'error' => 'AI service mengembalikan format respons yang tidak dikenali.',
+                ],
+                502,
+            );
+        }
+
         // Struktur respons yang diharapkan dari AI service:
         // { answer, agent_used, sources: [ai_document_id, ...], evaluation: { accuracy, effectiveness, efficiency, explainability, hallucination } }
 
-        $aiQuery = AiQuery::create([
-            'user_id' => auth()->id(),
-            'question' => $request->input('question'),
-            'agent_used' => $data['agent_used'] ?? null,
-            'answer' => $data['answer'] ?? null,
-            'sources' => $data['sources'] ?? [],
-            'latency_ms' => $latencyMs,
-        ]);
+        try {
+            $aiQuery = AiQuery::create([
+                'user_id' => auth()->id(),
+                'question' => $request->input('question'),
+                'agent_used' => $data['agent_used'] ?? null,
+                'answer' => $data['answer'] ?? null,
+                'sources' => $data['sources'] ?? [],
+                'latency_ms' => $latencyMs,
+            ]);
 
-        if (isset($data['evaluation'])) {
-            AiEvaluation::create([
-                'ai_query_id' => $aiQuery->id,
-                'accuracy_score' => $data['evaluation']['accuracy'] ?? null,
-                'effectiveness_score' => $data['evaluation']['effectiveness'] ?? null,
-                'efficiency_score' => $data['evaluation']['efficiency'] ?? null,
-                'explainability_score' => $data['evaluation']['explainability'] ?? null,
-                'hallucination_score' => $data['evaluation']['hallucination'] ?? null,
+            if (isset($data['evaluation'])) {
+                AiEvaluation::create([
+                    'ai_query_id' => $aiQuery->id,
+                    'accuracy_score' => $data['evaluation']['accuracy'] ?? null,
+                    'effectiveness_score' => $data['evaluation']['effectiveness'] ?? null,
+                    'efficiency_score' => $data['evaluation']['efficiency'] ?? null,
+                    'explainability_score' => $data['evaluation']['explainability'] ?? null,
+                    'hallucination_score' => $data['evaluation']['hallucination'] ?? null,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Jawaban dari AI sudah didapat, tapi gagal disimpan ke riwayat/evaluasi.
+            // Tetap kembalikan jawabannya ke pengguna, jangan sampai user tidak dapat apa-apa
+            // hanya karena masalah database (misal kolom belum di-migrate).
+            \Illuminate\Support\Facades\Log::error('Gagal menyimpan hasil AI query ke database', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'question' => $request->input('question'),
+                'answer' => $data['answer'],
+                'agent_used' => $data['agent_used'] ?? null,
+                'latency_ms' => $latencyMs,
+                'warning' => 'Jawaban berhasil didapat, tapi gagal disimpan ke riwayat. Cek storage/logs/laravel.log.',
             ]);
         }
 
@@ -89,6 +125,8 @@ class AiAssistantController extends Controller
             'answer' => $aiQuery->answer,
             'agent_used' => $aiQuery->agent_used,
             'latency_ms' => $aiQuery->latency_ms,
+            'sources' => $aiQuery->sources,
+            'evaluation' => $data['evaluation'] ?? null,
         ]);
     }
 
