@@ -216,11 +216,22 @@ Route::middleware(['auth', 'role:anggota'])->group(function () {
     Route::get('/perlengkapan/peminjaman/create/{id}', [PerlengkapanController::class, 'peminjamanCreate'])->name('peminjaman.create');
     Route::post('/perlengkapan/peminjaman', [PerlengkapanController::class, 'peminjamanStore'])->name('peminjaman.store');
 
-    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
-    Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
+    /*
+    |--------------------------------------------------------------------------
+    | KEUANGAN
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
+        Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
 
-    Route::middleware('role:admin')->group(function () {
+        // route lain yang sudah ada (dashboard, struktur, dst) tetap di sini...
+    });
+
+    Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/ai-assistant/insight', [AiAssistantController::class, 'insight'])->name('ai.insight');
+
+        // route admin lain yang sudah ada tetap di sini...
     });
 
     /*

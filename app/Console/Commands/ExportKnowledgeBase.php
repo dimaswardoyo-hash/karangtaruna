@@ -46,12 +46,23 @@ class ExportKnowledgeBase extends Command
 
     private function upsertDoc(string $division, string $sourceType, int $sourceId, string $content): int
     {
+        $existing = AiDocument::where('division', $division)
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->first();
+
+        // Hanya reset embedded_at kalau dokumen baru atau isinya benar-benar berubah,
+        // supaya dokumen yang tidak berubah tidak ikut di-re-embed setiap kali command dijalankan.
+        $contentChanged = !$existing || $existing->content !== $content;
+
         $doc = AiDocument::updateOrCreate(
             ['division' => $division, 'source_type' => $sourceType, 'source_id' => $sourceId],
-            ['content' => $content, 'embedded_at' => null] // reset embedded_at supaya di-re-embed saat berubah
+            $contentChanged
+                ? ['content' => $content, 'embedded_at' => null]
+                : ['content' => $content]
         );
 
-        return $doc->wasRecentlyCreated || $doc->wasChanged() ? 1 : 0;
+        return $doc->wasRecentlyCreated || $contentChanged ? 1 : 0;
     }
 
     private function exportKeuangan(): int
