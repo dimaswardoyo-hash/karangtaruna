@@ -34,10 +34,20 @@ class AiAssistantController extends Controller
 
         $start = microtime(true);
 
-        $response = Http::timeout(30)->post(rtrim(config('services.ai_service.url'), '/') . '/query', [
-            'question' => $request->input('question'),
-            'user_role' => auth()->user()->role,
-        ]);
+        try {
+            $response = Http::timeout(30)->post(rtrim(config('services.ai_service.url'), '/') . '/query', [
+                'question' => $request->input('question'),
+                'user_role' => auth()->user()->role,
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            // ai-service belum jalan / alamat AI_SERVICE_URL salah / port ditutup firewall.
+            return response()->json(
+                [
+                    'error' => 'Tidak dapat terhubung ke AI service. Pastikan ai-service (python app.py) sedang berjalan dan AI_SERVICE_URL di .env sudah benar.',
+                ],
+                502,
+            );
+        }
 
         $latencyMs = (int) ((microtime(true) - $start) * 1000);
 
