@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiAssistantController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AgendaController, AuthController, BroadcastController, ContentController, DashboardController, FinanceController, HomeController, ManageUsersController, PerlengkapanController, ProfileController, StrukturController, UndanganController};
 
@@ -214,6 +215,13 @@ Route::middleware(['auth', 'role:anggota'])->group(function () {
     Route::get('/peminjaman', [PerlengkapanController::class, 'peminjamanIndex'])->name('peminjaman.index');
     Route::get('/perlengkapan/peminjaman/create/{id}', [PerlengkapanController::class, 'peminjamanCreate'])->name('peminjaman.create');
     Route::post('/perlengkapan/peminjaman', [PerlengkapanController::class, 'peminjamanStore'])->name('peminjaman.store');
+
+    Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.index');
+    Route::post('/ai-assistant/query', [AiAssistantController::class, 'query'])->name('ai.query');
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/ai-assistant/insight', [AiAssistantController::class, 'insight'])->name('ai.insight');
+    });
 
     /*
     |--------------------------------------------------------------------------

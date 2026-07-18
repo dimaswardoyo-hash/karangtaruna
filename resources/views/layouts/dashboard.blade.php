@@ -71,6 +71,13 @@
                 </a>
             </li>
 
+            <li class="nav-item {{ request()->is('ai-assistant*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('ai.index') }}">
+                    <i class="fas fa-robot"></i>
+                    <span>AI Assistant</span>
+                </a>
+            </li>
+
             {{-- === ADMIN ONLY === --}}
             @if (auth()->check() && auth()->user()->role === 'admin')
                 <li class="nav-item {{ request()->is('manageUsers*') ? 'active' : '' }}">
