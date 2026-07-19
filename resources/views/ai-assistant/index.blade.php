@@ -158,11 +158,10 @@
 
         .ai-bubble {
             max-width: 82%;
-            padding: 10px 14px;
+            padding: 12px 16px;
             border-radius: 14px;
             font-size: 0.9rem;
-            line-height: 1.5;
-            white-space: pre-wrap;
+            line-height: 1.65;
             word-break: break-word;
         }
 
@@ -170,6 +169,7 @@
             background: var(--ai-accent);
             color: #fff;
             border-bottom-right-radius: 4px;
+            white-space: pre-wrap;
         }
 
         .ai-bubble.ai {
@@ -181,6 +181,47 @@
         .ai-bubble.error {
             background: #fbeaea;
             color: #a32d2d;
+            white-space: pre-wrap;
+        }
+
+        .ai-answer-p {
+            margin: 0 0 10px 0;
+        }
+
+        .ai-answer-p:last-child {
+            margin-bottom: 0;
+        }
+
+        .ai-answer-section {
+            font-weight: 700;
+            font-size: 0.82rem;
+            color: var(--ai-accent-dark);
+            margin: 14px 0 6px 0;
+        }
+
+        .ai-answer-section:first-child {
+            margin-top: 0;
+        }
+
+        .ai-answer-list {
+            list-style: none;
+            margin: 0 0 10px 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-answer-list:last-child {
+            margin-bottom: 0;
+        }
+
+        .ai-answer-list li {
+            background: #ffffff;
+            border-left: 3px solid var(--ai-accent);
+            border-radius: 8px;
+            padding: 8px 12px;
+            line-height: 1.55;
         }
 
         .ai-agent-label {
@@ -378,6 +419,47 @@
                 return div.innerHTML;
             }
 
+            // Mengubah teks jawaban (baris "- ..." dan header "[Divisi]") jadi
+            // struktur HTML rapi (list & judul seksi), bukan satu blok teks panjang.
+            function formatAnswer(text) {
+                if (!text) return '';
+
+                const lines = String(text).split('\n');
+                let html = '';
+                let listBuffer = [];
+
+                function flushList() {
+                    if (listBuffer.length) {
+                        html += '<ul class="ai-answer-list">' +
+                            listBuffer.map((li) => `<li>${escapeHtml(li)}</li>`).join('') +
+                            '</ul>';
+                        listBuffer = [];
+                    }
+                }
+
+                lines.forEach((rawLine) => {
+                    const line = rawLine.trim();
+                    if (!line) {
+                        flushList();
+                        return;
+                    }
+
+                    const sectionMatch = line.match(/^\[(.+)\]$/);
+                    if (sectionMatch) {
+                        flushList();
+                        html += `<div class="ai-answer-section">${escapeHtml(sectionMatch[1])}</div>`;
+                    } else if (line.startsWith('- ')) {
+                        listBuffer.push(line.slice(2));
+                    } else {
+                        flushList();
+                        html += `<p class="ai-answer-p">${escapeHtml(line)}</p>`;
+                    }
+                });
+                flushList();
+
+                return html;
+            }
+
             function addRiwayatItem(id, question, agent) {
                 const empty = document.getElementById('riwayat-empty');
                 if (empty) empty.remove();
@@ -476,7 +558,7 @@
                         <div>
                             <div class="ai-bubble ai">
                                 <div class="ai-agent-label">${escapeHtml(agent)}</div>
-                                ${escapeHtml(data.answer ?? '')}
+                                ${formatAnswer(data.answer)}
                                 ${badges}
                             </div>
                             <div class="ai-meta">${data.latency_ms ?? 0} ms${data.warning ? ' &middot; ' + escapeHtml(data.warning) : ''}</div>
