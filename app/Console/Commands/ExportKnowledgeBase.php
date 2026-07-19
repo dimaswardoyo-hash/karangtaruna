@@ -11,7 +11,7 @@ use App\Models\Notulen;
 use App\Models\Peminjaman;
 use App\Models\Pengeluaran;
 use App\Models\Perlengkapan;
-use App\Models\Presensi;
+use App\Services\AiDocumentBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
@@ -21,10 +21,18 @@ class ExportKnowledgeBase extends Command
      * php artisan ai:export-knowledge
      * Tambahkan --push untuk langsung mengirim dokumen baru ke AI service
      * (endpoint /ingest) agar di-embed ke Vector DB.
+     *
+     * Catatan: sejak ditambahkan Observer (lihat app/Observers), data yang
+     * dibuat/diubah/dihapus lewat aplikasi akan otomatis sync ke knowledge
+     * base secara real-time. Command ini sekarang terutama dipakai untuk:
+     * (1) backfill data lama saat pertama kali setup, atau
+     * (2) resync massal kalau ai-service sempat mati saat ada perubahan data
+     *     (dokumen yang gagal sync real-time tetap punya embedded_at = null,
+     *     jadi otomatis ikut terkirim di sini).
      */
     protected $signature = 'ai:export-knowledge {--push : Kirim dokumen baru ke AI service setelah export}';
 
-    protected $description = 'Export data Keuangan, Kegiatan, dan Perlengkapan menjadi dokumen teks untuk knowledge base RAG';
+    protected $description = 'Export data Keuangan, Kegiatan, dan Perlengkapan menjadi dokumen teks untuk knowledge base RAG (backfill/resync manual)';
 
     public function handle(): int
     {
@@ -70,23 +78,23 @@ class ExportKnowledgeBase extends Command
         $n = 0;
 
         foreach (Kas::with('user')->get() as $kas) {
-            $content = "Kas masuk tanggal {$kas->tanggal} sejumlah Rp{$kas->jumlah} dari {$kas->user?->name}. Deskripsi: {$kas->deskripsi}.";
-            $n += $this->upsertDoc('keuangan', 'kas', $kas->id, $content);
+            $doc = AiDocumentBuilder::kas($kas);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         foreach (Pengeluaran::all() as $p) {
-            $content = "Pengeluaran untuk kegiatan {$p->kegiatan} tanggal {$p->tanggal} sejumlah Rp{$p->jumlah}, sumber dana: {$p->sumber_dana}. Deskripsi: {$p->deskripsi}.";
-            $n += $this->upsertDoc('keuangan', 'pengeluaran', $p->id, $content);
+            $doc = AiDocumentBuilder::pengeluaran($p);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         foreach (DanaLain::all() as $d) {
-            $content = "Dana lain tanggal {$d->tanggal} sejumlah Rp{$d->jumlah}. Deskripsi: {$d->deskripsi}.";
-            $n += $this->upsertDoc('keuangan', 'dana_lain', $d->id, $content);
+            $doc = AiDocumentBuilder::danaLain($d);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         foreach (Hutang::with('user')->get() as $h) {
-            $content = "Hutang anggota {$h->user?->name} tanggal {$h->tanggal} sejumlah Rp{$h->jumlah}. Keterangan: {$h->keterangan}.";
-            $n += $this->upsertDoc('keuangan', 'hutang', $h->id, $content);
+            $doc = AiDocumentBuilder::hutang($h);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         return $n;
@@ -97,14 +105,13 @@ class ExportKnowledgeBase extends Command
         $n = 0;
 
         foreach (Agenda::with('presensis.user')->get() as $a) {
-            $jumlahHadir = $a->presensis->count();
-            $content = "Agenda '{$a->nama_agenda}' kategori {$a->kategori} berlangsung {$a->waktu_mulai} sampai {$a->waktu_selesai} di {$a->lokasi}. Deskripsi: {$a->deskripsi}. Jumlah anggota yang presensi: {$jumlahHadir}.";
-            $n += $this->upsertDoc('kegiatan', 'agenda', $a->id, $content);
+            $doc = AiDocumentBuilder::agenda($a);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         foreach (Notulen::with('agenda')->get() as $notulen) {
-            $content = "Notulen rapat agenda '{$notulen->agenda?->nama_agenda}'. Pembicara: {$notulen->pembicara}. Poin pembahasan: {$notulen->poin_pembahasan}. Kesimpulan: {$notulen->kesimpulan}.";
-            $n += $this->upsertDoc('kegiatan', 'notulen', $notulen->id, $content);
+            $doc = AiDocumentBuilder::notulen($notulen);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         return $n;
@@ -115,13 +122,13 @@ class ExportKnowledgeBase extends Command
         $n = 0;
 
         foreach (Perlengkapan::all() as $barang) {
-            $content = "Barang '{$barang->nama}' total stok {$barang->stok_awal}, sisa stok {$barang->stok}, sedang dipinjam {$barang->sedang_dipinjam}. Deskripsi: {$barang->deskripsi}.";
-            $n += $this->upsertDoc('perlengkapan', 'perlengkapan', $barang->id, $content);
+            $doc = AiDocumentBuilder::perlengkapan($barang);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         foreach (Peminjaman::with(['user', 'perlengkapan'])->get() as $pinjam) {
-            $content = "Peminjaman barang '{$pinjam->perlengkapan?->nama}' oleh {$pinjam->user?->name} sejumlah {$pinjam->jumlah}, status {$pinjam->status}, tanggal pinjam {$pinjam->tanggal_pinjam} rencana kembali {$pinjam->tanggal_kembali}.";
-            $n += $this->upsertDoc('perlengkapan', 'peminjaman', $pinjam->id, $content);
+            $doc = AiDocumentBuilder::peminjaman($pinjam);
+            $n += $this->upsertDoc($doc['division'], $doc['source_type'], $doc['id'], $doc['content']);
         }
 
         return $n;
